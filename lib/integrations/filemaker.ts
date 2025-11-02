@@ -35,7 +35,7 @@ async function getFileMakerToken(): Promise<string> {
     cachedToken = data.response.token;
     tokenExpiry = Date.now() + (14 * 60 * 1000); // Token valid for 15 minutes, cache for 14
 
-    return cachedToken;
+    return cachedToken as string;
   } catch (error) {
     console.error('Error getting FileMaker token:', error);
     throw error;
