@@ -145,6 +145,8 @@ export const db = {
 
   async upsertOrder(order: Partial<Order>): Promise<Order | null> {
     try {
+      const dueDate = order.due_date ? (order.due_date instanceof Date ? order.due_date.toISOString() : order.due_date) : new Date().toISOString();
+      
       const result = await sql<Order>`
         INSERT INTO orders (
           order_number, platform, customer_name, customer_email, quantity,
@@ -153,7 +155,7 @@ export const db = {
         VALUES (
           ${order.order_number}, ${order.platform}, ${order.customer_name || null},
           ${order.customer_email || null}, ${order.quantity}, ${order.decoration_method},
-          ${order.due_date}, ${order.status || 'pending'}, ${order.priority || false},
+          ${dueDate}, ${order.status || 'pending'}, ${order.priority || false},
           ${order.notes || null}, ${order.order_details ? JSON.stringify(order.order_details) : null},
           NOW()
         )
