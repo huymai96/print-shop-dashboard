@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
+import { sql } from '@vercel/postgres';
 import { db } from './db';
 import type { User } from '@/types';
 
@@ -33,7 +34,11 @@ export async function createToken(user: User): Promise<string> {
 export async function verifyToken(token: string): Promise<SessionData | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as SessionData;
+    return {
+      userId: payload.userId as string,
+      email: payload.email as string,
+      role: payload.role as string,
+    };
   } catch (error) {
     return null;
   }
@@ -65,30 +70,37 @@ export async function getCurrentUser(): Promise<User | null> {
 // Login
 export async function login(email: string, password: string): Promise<{ success: boolean; token?: string; error?: string }> {
   try {
-    const user = await db.getUser(email);
-
-    if (!user) {
+    // Query to get user with password hash
+    const result = await sql`
+      SELECT id, email, name, role, password_hash FROM users WHERE email = ${email}
+    `;
+    
+    if (result.rows.length === 0) {
       return { success: false, error: 'Invalid email or password' };
     }
 
-    // Get password hash
-    const result = await db.getUser(email);
-    if (!result) {
-      return { success: false, error: 'Invalid email or password' };
-    }
-
-    const passwordHash = (result as any).password_hash;
+    const userRow = result.rows[0];
+    const passwordHash = userRow.password_hash;
+    
     const isValidPassword = await bcrypt.compare(password, passwordHash);
 
     if (!isValidPassword) {
       return { success: false, error: 'Invalid email or password' };
     }
 
+    const user = {
+      id: userRow.id,
+      email: userRow.email,
+      name: userRow.name,
+      role: userRow.role,
+      created_at: new Date(),
+    };
+
     // Update last login
     await db.updateLastLogin(user.id);
 
     // Create token
-    const token = await createToken(user);
+    const token = await createToken(user as any);
 
     return { success: true, token };
   } catch (error) {
