@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth';
 export default async function DashboardLayout({
   children,
 }: {
-  children: React.Node;
+  children: React.ReactNode;
 }) {
   const session = await getSession();
 
@@ -14,4 +14,3 @@ export default async function DashboardLayout({
 
   return <>{children}</>;
 }
-
